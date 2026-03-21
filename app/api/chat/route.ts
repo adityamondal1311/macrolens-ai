@@ -40,7 +40,12 @@ export async function POST(req: NextRequest) {
   // Retrieve relevant knowledge chunks from Supabase
   let context = "";
   try {
-    context = await retrieveRelevantChunks(latestUserMessage, 5);
+    context = await retrieveRelevantChunks(latestUserMessage, 7);
+
+    console.log("--------- RAG QUERY ---------");
+    console.log("User question:", latestUserMessage);
+    console.log("Retrieved context:", context.slice(0, 500));
+    console.log("-----------------------------");
   } catch (err) {
     console.error("RAG retrieval failed, using base prompt only:", err);
   }

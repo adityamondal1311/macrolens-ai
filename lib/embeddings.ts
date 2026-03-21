@@ -10,11 +10,13 @@ let pipelineInstance: any = null;
 
 async function getPipeline() {
   if (!pipelineInstance) {
+    console.log("Loading embedding model...");
     const { pipeline } = await import("@xenova/transformers");
     pipelineInstance = await pipeline(
       "feature-extraction",
       "Xenova/all-MiniLM-L6-v2"
     );
+    console.log("Embedding model ready.");
   }
   return pipelineInstance;
 }
@@ -27,7 +29,7 @@ export async function getQueryEmbedding(text: string): Promise<number[]> {
 
 export async function retrieveRelevantChunks(
   query: string,
-  matchCount: number = 5
+  matchCount: number = 7
 ): Promise<string> {
   const embedding = await getQueryEmbedding(query);
 
