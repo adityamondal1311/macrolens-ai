@@ -62,6 +62,7 @@ interface Message {
   content: string;
   timestamp: number;
   done?: boolean;
+  sources?: string[];
 }
 
 function getFollowUps(content: string): string[] {
@@ -106,16 +107,24 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-function MessageBubble({ msg, onFollowUp, loadingMessage }: {
+function MessageBubble({ msg, onFollowUp, loadingMessage, index }: {
   msg: Message;
   onFollowUp: (label: string) => void;
   loadingMessage?: string;
+  index: number;
 }) {
   const isUser = msg.role === "user";
   const isStreaming = !isUser && !msg.done && msg.content === "";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(msg.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", marginBottom: 24, animation: "fadeSlideIn 0.35s ease forwards" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", marginBottom: 24, animation: `fadeSlideIn 0.35s ease ${index * 0.04}s both` }}>
       {/* Bot header — always shown for assistant messages */}
       {!isUser && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -159,21 +168,52 @@ function MessageBubble({ msg, onFollowUp, loadingMessage }: {
         )}
       </div>
 
-      {/* Follow-up buttons */}
+      {/* Sources + copy + follow-ups */}
       {!isUser && msg.content && msg.done && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, maxWidth: "88%" }}>
-          {getFollowUps(msg.content).map((label, i) => (
+        <>
+          {msg.sources && msg.sources.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#2e3a50", letterSpacing: 0.5 }}>SOURCES:</span>
+              {msg.sources.map((s, i) => (
+                <span key={i} style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#2e4a3a", background: "rgba(78,204,163,0.05)", border: "1px solid rgba(78,204,163,0.12)", borderRadius: 6, padding: "2px 7px", letterSpacing: 0.3 }}>
+                  {s.replace(".md", "")}
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, maxWidth: "88%", alignItems: "center" }}>
             <button
-              key={i}
-              onClick={() => onFollowUp(label)}
-              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#4ecca3"; b.style.color = "#4ecca3"; b.style.background = "rgba(78,204,163,0.05)"; }}
-              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#1e2535"; b.style.color = "#6b7280"; b.style.background = "transparent"; }}
-              style={{ padding: "5px 12px", background: "transparent", border: "1px solid #1e2535", borderRadius: 20, color: "#6b7280", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s ease" }}
+              onClick={handleCopy}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#2a3a50"; b.style.color = "#6b8090"; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#1a2030"; b.style.color = "#3a4a60"; }}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "transparent", border: "1px solid #1a2030", borderRadius: 8, color: "#3a4a60", fontSize: 10, fontFamily: "'DM Mono', monospace", cursor: "pointer", letterSpacing: 0.5, transition: "all 0.15s ease" }}
             >
-              {label}
+              {copied ? (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L3.5 7.5L8.5 2.5" stroke="#4ecca3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <span style={{ color: "#4ecca3" }}>COPIED</span>
+                </>
+              ) : (
+                <>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="3.5" y="1" width="5.5" height="6.5" rx="1" stroke="currentColor" strokeWidth="1" /><rect x="1" y="3.5" width="5.5" height="6.5" rx="1" stroke="currentColor" strokeWidth="1" /></svg>
+                  COPY
+                </>
+              )}
             </button>
-          ))}
-        </div>
+            <div style={{ width: 1, height: 14, background: "#1a2030" }} />
+            {getFollowUps(msg.content).map((label, i) => (
+              <button
+                key={i}
+                onClick={() => onFollowUp(label)}
+                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#4ecca3"; b.style.color = "#4ecca3"; b.style.background = "rgba(78,204,163,0.05)"; }}
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#1e2535"; b.style.color = "#6b7280"; b.style.background = "transparent"; }}
+                style={{ padding: "5px 12px", background: "transparent", border: "1px solid #1e2535", borderRadius: 20, color: "#6b7280", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s ease" }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {/* User timestamp */}
@@ -239,6 +279,15 @@ export default function MacroLens() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Auto-focus input on page load
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -419,6 +468,7 @@ export default function MacroLens() {
                 <MessageBubble
                   key={i}
                   msg={msg}
+                  index={i}
                   onFollowUp={sendMessage}
                   loadingMessage={loadingMessage}
                 />
