@@ -428,22 +428,7 @@ export default function MacroLens() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Chips bar */}
-        {messages.length > 0 && !loading && (
-          <div style={{ position: "relative", zIndex: 2, padding: "8px 20px 4px", display: "flex", gap: 6, overflowX: "auto", flexShrink: 0, borderTop: "1px solid #0a0e18" }}>
-            {SUGGESTED_PROMPTS.slice(0, 4).map((p, i) => (
-              <button
-                key={i}
-                onClick={() => sendMessage(p)}
-                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#1e3030"; b.style.color = "#4ecca3"; }}
-                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#12182a"; b.style.color = "#3a4060"; }}
-                style={{ flexShrink: 0, padding: "5px 12px", background: "transparent", border: "1px solid #12182a", borderRadius: 16, color: "#3a4060", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer", letterSpacing: 0.3, transition: "all 0.15s ease", whiteSpace: "nowrap" }}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        )}
+
 
         {/* Error */}
         {error && (
