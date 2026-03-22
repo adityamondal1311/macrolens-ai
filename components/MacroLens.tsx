@@ -125,11 +125,12 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-function MessageBubble({ msg, onFollowUp, loadingMessage, index }: {
+function MessageBubble({ msg, onFollowUp, loadingMessage, index, totalMessages }: {
   msg: Message;
   onFollowUp: (label: string) => void;
   loadingMessage?: string;
   index: number;
+  totalMessages: number;
 }) {
   const isUser = msg.role === "user";
   const isStreaming = !isUser && !msg.done && msg.content === "";
@@ -186,8 +187,8 @@ function MessageBubble({ msg, onFollowUp, loadingMessage, index }: {
         )}
       </div>
 
-      {/* Sources + copy + follow-ups */}
-      {!isUser && msg.content && msg.done && (
+      {/* Sources + copy + follow-ups — only on last message */}
+      {!isUser && msg.content && msg.done && index === (totalMessages - 1) && (
         <>
           {msg.sources && msg.sources.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
@@ -487,6 +488,7 @@ export default function MacroLens() {
                   key={i}
                   msg={msg}
                   index={i}
+                  totalMessages={messages.length}
                   onFollowUp={sendMessage}
                   loadingMessage={loadingMessage}
                 />
