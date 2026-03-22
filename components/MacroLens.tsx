@@ -52,9 +52,18 @@ const ERROR_MESSAGES = [
 ];
 
 const FOLLOW_UP_SETS: Record<string, string[]> = {
-  default: ["Explain deeper", "Real-world example", "How does this affect equities?", "Historical precedent"],
-  rates: ["Impact on bonds", "Impact on equities", "EM market effect", "Historical comparison"],
+  default:   ["Explain deeper", "Real-world example", "How does this affect equities?", "Historical precedent"],
+  rates:     ["Impact on bonds", "Impact on equities", "EM market effect", "Historical comparison"],
   inflation: ["Fed's response", "Bond market impact", "Sector rotation play", "Compare to 1970s"],
+  gold:      ["Why gold vs real rates?", "Gold in recessions", "Central bank buying", "Gold vs Bitcoin"],
+  recession: ["Which sectors are safe?", "How long do recessions last?", "Fed response playbook", "Leading indicators"],
+  currency:  ["Impact on EM currencies", "Dollar vs commodities", "Carry trade implications", "Safe haven flows"],
+  qe:        ["Effect on equities", "Effect on gold", "How does QT reverse this?", "Historical QE programs"],
+  credit:    ["HY vs IG spreads", "Credit and equities", "When to buy HY?", "Default cycle history"],
+  emerging:  ["Most vulnerable EMs", "Dollar impact on EM", "EM vs DM equities", "Capital flow reversal"],
+  liquidity: ["How does QT drain liquidity?", "M2 and asset prices", "Global liquidity cycle", "Repo market stress"],
+  carry:     ["Best carry currencies now", "When does carry unwind?", "JPY carry risk", "Carry vs volatility"],
+  vix:       ["VIX and equity positioning", "How to hedge with VIX?", "Cross-asset volatility", "Vol regime change"],
 };
 
 interface Message {
@@ -67,8 +76,17 @@ interface Message {
 
 function getFollowUps(content: string): string[] {
   const lower = content.toLowerCase();
-  if (lower.includes("rate") || lower.includes("fed") || lower.includes("yield")) return FOLLOW_UP_SETS.rates;
-  if (lower.includes("inflation") || lower.includes("cpi") || lower.includes("price")) return FOLLOW_UP_SETS.inflation;
+  if (lower.includes("gold") || lower.includes("commodit")) return FOLLOW_UP_SETS.gold;
+  if (lower.includes("recession") || lower.includes("pmi") || lower.includes("leading indicator")) return FOLLOW_UP_SETS.recession;
+  if (lower.includes("currency") || lower.includes("dxy") || lower.includes("yen") || lower.includes(" fx ") || lower.includes("forex")) return FOLLOW_UP_SETS.currency;
+  if (lower.includes("quantitative") || lower.includes(" qe") || lower.includes(" qt") || lower.includes("balance sheet")) return FOLLOW_UP_SETS.qe;
+  if (lower.includes("credit") || lower.includes("spread") || lower.includes("high yield") || lower.includes("corporate bond")) return FOLLOW_UP_SETS.credit;
+  if (lower.includes("emerging market") || lower.includes(" em ") || lower.includes("brics")) return FOLLOW_UP_SETS.emerging;
+  if (lower.includes("liquidity") || lower.includes("money supply") || lower.includes("m2") || lower.includes("repo")) return FOLLOW_UP_SETS.liquidity;
+  if (lower.includes("carry") || lower.includes("funding currency")) return FOLLOW_UP_SETS.carry;
+  if (lower.includes("vix") || lower.includes("volatility") || lower.includes("fear")) return FOLLOW_UP_SETS.vix;
+  if (lower.includes("rate") || lower.includes("fed") || lower.includes("yield") || lower.includes("bond")) return FOLLOW_UP_SETS.rates;
+  if (lower.includes("inflation") || lower.includes("cpi") || lower.includes("price") || lower.includes("deflat")) return FOLLOW_UP_SETS.inflation;
   return FOLLOW_UP_SETS.default;
 }
 
