@@ -51,7 +51,7 @@ Supabase pgvector — Similarity Search
 Claude API — claude-sonnet-4-20250514
 (System prompt injected with retrieved context)
      ↓
-Streaming Response → UI
+Streaming Response → UI (RAF-batched for smooth rendering)
 ```
 
 This is a full **RAG (Retrieval Augmented Generation)** pipeline. Every response is grounded in the knowledge base rather than relying purely on model training data.
@@ -62,13 +62,29 @@ This is a full **RAG (Retrieval Augmented Generation)** pipeline. Every response
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15, React, Tailwind CSS |
+| Frontend | Next.js 15, React, TypeScript |
+| UI | Custom dark theme, DM Sans + DM Mono, react-markdown |
 | AI Model | Anthropic Claude (claude-sonnet-4-20250514) |
 | Embeddings | Transformers.js — `Xenova/all-MiniLM-L6-v2` (local, free) |
 | Vector Database | Supabase with pgvector extension |
-| Streaming | Anthropic streaming API, ReadableStream |
+| Streaming | Anthropic streaming API, RAF-batched ReadableStream |
 | Deployment | Vercel |
-| Language | TypeScript |
+
+---
+
+## Features
+
+- **Streaming responses** — text renders smoothly using `requestAnimationFrame` batching, eliminating the choppy spurt effect common in AI chat UIs
+- **RAG-grounded answers** — every response is retrieved from and grounded in the 26-document knowledge base, not generic model output
+- **Contextual follow-up buttons** — 12 topic-specific follow-up sets (gold, recession, currency, QE/QT, credit spreads, carry trade, VIX, and more) that only appear on the latest response and disappear when a new question is asked
+- **Markdown rendering** — responses render with proper bold, headers, lists, and code blocks
+- **Copy button** — one-click copy on every response with visual confirmation state
+- **RAG badge** — subtle "RAG · KNOWLEDGE BASE" label signals grounded responses to technical reviewers
+- **Rotating loading messages** — contextual messages like "Scanning yield curve signals..." and "Checking central bank policy..." while waiting
+- **Auto-focus + keyboard shortcuts** — cursor lands in input on page load, Ctrl+K refocuses from anywhere, Shift+Enter for new lines
+- **Session reset** — clear conversation button in the header with confirm step and "SESSION RESET" pill animation
+- **Friendly error states** — randomized macro-themed error messages instead of raw API errors
+- **Staggered message animations** — messages animate in with a 40ms delay per index for a smooth cascade feel
 
 ---
 
@@ -153,7 +169,7 @@ macrolens/
 
 **1. Clone the repository**
 ```bash
-git clone https://github.com/yourusername/macrolens-ai.git
+git clone https://github.com/adityamondal1311/macrolens-ai.git
 cd macrolens-ai
 ```
 
@@ -224,11 +240,11 @@ This project is deployed on Vercel. To deploy your own instance:
 
 1. Push the repo to GitHub
 2. Import the project on [vercel.com](https://vercel.com)
-3. Add environment variables in Vercel dashboard:
+3. Add environment variables in the Vercel dashboard:
    - `ANTHROPIC_API_KEY`
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_KEY`
-4. Deploy
+4. Deploy — Vercel auto-detects Next.js and configures everything
 
 ---
 
@@ -238,7 +254,10 @@ This project is deployed on Vercel. To deploy your own instance:
 Transformers.js runs the embedding model locally on the server with zero API cost. The `all-MiniLM-L6-v2` model produces 384-dimension vectors and performs well for structured domain documents. For a 26-file knowledge base with clear topic boundaries, retrieval quality is excellent.
 
 **Why Supabase + pgvector instead of Pinecone?**
-Supabase offers a generous free tier, built-in SQL interface for easy inspection, and pgvector is a mature, well-tested extension. For a knowledge base of this size, it is more than sufficient and simpler to manage than a dedicated vector database.
+Supabase offers a generous free tier, a built-in SQL interface for easy inspection, and pgvector is a mature, well-tested extension. For a knowledge base of this size it is more than sufficient and far simpler to manage than a dedicated vector database.
 
 **Why a hand-written knowledge base instead of scraped data?**
-Scraped data introduces noise, inconsistent formatting, and copyright concerns. Hand-written documents allow precise control over structure, terminology, and the level of detail — ensuring every chunk is genuinely useful for retrieval.
+Scraped data introduces noise, inconsistent formatting, and copyright concerns. Hand-written documents allow precise control over structure, terminology, and depth — ensuring every chunk is genuinely useful for retrieval.
+
+**Why RAF batching for streaming?**
+The default approach of calling `setState` on every token causes React to re-render on each chunk, producing a choppy experience especially when the network delivers multiple tokens simultaneously. Buffering tokens and flushing them on `requestAnimationFrame` aligns state updates with the browser's paint cycle, producing smooth continuous text flow.
