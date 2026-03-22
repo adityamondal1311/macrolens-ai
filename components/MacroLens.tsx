@@ -83,29 +83,6 @@ function useLoadingMessage(loading: boolean) {
   return LOADING_MESSAGES[index];
 }
 
-function TypingIndicator({ message }: { message: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20, animation: "fadeSlideIn 0.3s ease forwards" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #0d2c1e 0%, #0a1f2e 100%)", border: "1px solid #4ecca3", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1L8.5 5.5H13L9.5 8L11 12.5L7 10L3 12.5L4.5 8L1 5.5H5.5L7 1Z" fill="#4ecca3" opacity="0.9" />
-          </svg>
-        </div>
-        <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#4ecca3", letterSpacing: 1 }}>MACROLENS</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#0d1117", borderRadius: "4px 16px 16px 16px", border: "1px solid #1a1f2e", maxWidth: 280 }}>
-        <div style={{ display: "flex", gap: 4 }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#4ecca3", animation: "pulse 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s`, opacity: 0.4 }} />
-          ))}
-        </div>
-        <span style={{ fontSize: 12, color: "#4a5568", fontFamily: "'DM Mono', monospace", letterSpacing: 0.3 }}>{message}</span>
-      </div>
-    </div>
-  );
-}
-
 function MarkdownContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
@@ -129,10 +106,17 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-function MessageBubble({ msg, onFollowUp }: { msg: Message; onFollowUp: (label: string) => void }) {
+function MessageBubble({ msg, onFollowUp, loadingMessage }: {
+  msg: Message;
+  onFollowUp: (label: string) => void;
+  loadingMessage?: string;
+}) {
   const isUser = msg.role === "user";
+  const isStreaming = !isUser && !msg.done && msg.content === "";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", marginBottom: 24, animation: "fadeSlideIn 0.35s ease forwards" }}>
+      {/* Bot header — always shown for assistant messages */}
       {!isUser && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #0d2c1e 0%, #0a1f2e 100%)", border: "1px solid #4ecca3", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -146,8 +130,11 @@ function MessageBubble({ msg, onFollowUp }: { msg: Message; onFollowUp: (label: 
           </span>
         </div>
       )}
+
+      {/* Bubble — shows loading state OR actual content, never both, never empty */}
       <div style={{
-        maxWidth: "88%", padding: isUser ? "12px 16px" : "16px 18px",
+        maxWidth: "88%",
+        padding: isUser ? "12px 16px" : "14px 18px",
         borderRadius: isUser ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
         background: isUser ? "linear-gradient(135deg, #0a2a1a 0%, #061d28 100%)" : "#0d1117",
         border: isUser ? "1px solid #1a4a2e" : "1px solid #1a1f2e",
@@ -155,10 +142,24 @@ function MessageBubble({ msg, onFollowUp }: { msg: Message; onFollowUp: (label: 
       }}>
         {isUser ? (
           <span style={{ color: "#c8f5e0" }}>{msg.content}</span>
+        ) : isStreaming ? (
+          /* Loading state inside the single bubble */
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#4ecca3", animation: "pulse 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s`, opacity: 0.4 }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 12, color: "#4a5568", fontFamily: "'DM Mono', monospace", letterSpacing: 0.3 }}>
+              {loadingMessage}
+            </span>
+          </div>
         ) : (
           <MarkdownContent content={msg.content} />
         )}
       </div>
+
+      {/* Follow-up buttons */}
       {!isUser && msg.content && msg.done && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, maxWidth: "88%" }}>
           {getFollowUps(msg.content).map((label, i) => (
@@ -174,6 +175,8 @@ function MessageBubble({ msg, onFollowUp }: { msg: Message; onFollowUp: (label: 
           ))}
         </div>
       )}
+
+      {/* User timestamp */}
       {isUser && (
         <span style={{ fontSize: 10, color: "#3a3f52", fontFamily: "'DM Mono', monospace", marginTop: 4 }}>
           {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -237,7 +240,6 @@ export default function MacroLens() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Ctrl+K to focus input
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -270,6 +272,7 @@ export default function MacroLens() {
     setMessages(newMessages);
     setLoading(true);
 
+    // Add assistant placeholder — content is "" so bubble shows loading state
     const assistantMsg: Message = { role: "assistant", content: "", timestamp: Date.now(), done: false };
     setMessages(prev => [...prev, assistantMsg]);
 
@@ -328,7 +331,7 @@ export default function MacroLens() {
         updated[updated.length - 1] = { ...updated[updated.length - 1], done: true };
         return updated;
       });
-    } catch (e: unknown) {
+    } catch {
       const randomError = ERROR_MESSAGES[Math.floor(Math.random() * ERROR_MESSAGES.length)];
       setError(randomError);
       setMessages(prev => prev.slice(0, -1));
@@ -360,7 +363,6 @@ export default function MacroLens() {
 
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#080b10", fontFamily: "'DM Sans', sans-serif", color: "#c8ccd8", position: "relative", overflow: "hidden" }}>
 
-        {/* Background grid */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "linear-gradient(rgba(78,204,163,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(78,204,163,0.015) 1px, transparent 1px)", backgroundSize: "48px 48px", zIndex: 0 }} />
 
         {/* Header */}
@@ -377,35 +379,24 @@ export default function MacroLens() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Clear conversation button */}
             {messages.length > 0 && (
               <div style={{ position: "relative" }}>
                 {showClearConfirm ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 6, animation: "fadeSlideIn 0.2s ease forwards" }}>
                     <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "'DM Mono', monospace" }}>Reset?</span>
-                    <button
-                      onClick={clearConversation}
-                      style={{ padding: "4px 10px", background: "rgba(220,60,60,0.1)", border: "1px solid rgba(220,60,60,0.25)", borderRadius: 8, color: "#e07070", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer" }}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => setShowClearConfirm(false)}
-                      style={{ padding: "4px 10px", background: "transparent", border: "1px solid #1a2030", borderRadius: 8, color: "#6b7280", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer" }}
-                    >
-                      No
-                    </button>
+                    <button onClick={clearConversation} style={{ padding: "4px 10px", background: "rgba(220,60,60,0.1)", border: "1px solid rgba(220,60,60,0.25)", borderRadius: 8, color: "#e07070", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer" }}>Yes</button>
+                    <button onClick={() => setShowClearConfirm(false)} style={{ padding: "4px 10px", background: "transparent", border: "1px solid #1a2030", borderRadius: 8, color: "#6b7280", fontSize: 11, fontFamily: "'DM Mono', monospace", cursor: "pointer" }}>No</button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setShowClearConfirm(true)}
                     title="Reset analysis"
-                    style={{ width: 30, height: 30, background: "transparent", border: "1px solid #1a2030", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
                     onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#2a3040"; b.style.background = "#0d1117"; }}
                     onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = "#1a2030"; b.style.background = "transparent"; }}
+                    style={{ width: 30, height: 30, background: "transparent", border: "1px solid #1a2030", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
                   >
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M2 6.5A4.5 4.5 0 0 1 9.5 2.5M11 6.5A4.5 4.5 0 0 1 3.5 10.5M9.5 2.5V5M9.5 2.5H7M3.5 10.5V8M3.5 10.5H6" stroke="#6b7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M2 6.5A4.5 4.5 0 0 1 9.5 2.5M11 6.5A4.5 4.5 0 0 1 3.5 10.5M9.5 2.5V5M9.5 2.5H7M3.5 10.5V8M3.5 10.5H6" stroke="#6b7280" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </button>
                 )}
@@ -425,11 +416,13 @@ export default function MacroLens() {
           ) : (
             <div style={{ maxWidth: 720, width: "100%", margin: "0 auto" }}>
               {messages.map((msg, i) => (
-                <MessageBubble key={i} msg={msg} onFollowUp={sendMessage} />
+                <MessageBubble
+                  key={i}
+                  msg={msg}
+                  onFollowUp={sendMessage}
+                  loadingMessage={loadingMessage}
+                />
               ))}
-              {loading && messages[messages.length - 1]?.content === "" && (
-                <TypingIndicator message={loadingMessage} />
-              )}
             </div>
           )}
           <div ref={bottomRef} />
@@ -455,7 +448,7 @@ export default function MacroLens() {
         {/* Error */}
         {error && (
           <div style={{ padding: "10px 20px", background: "rgba(180,40,40,0.08)", borderTop: "1px solid rgba(180,40,40,0.15)", color: "#e07070", fontSize: 12, fontFamily: "'DM Mono', monospace", textAlign: "center", position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#e07070" strokeWidth="1.2"/><path d="M6 3.5V6.5M6 8.5V8.4" stroke="#e07070" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#e07070" strokeWidth="1.2" /><path d="M6 3.5V6.5M6 8.5V8.4" stroke="#e07070" strokeWidth="1.2" strokeLinecap="round" /></svg>
             {error}
             <button onClick={() => setError(null)} style={{ marginLeft: 8, background: "transparent", border: "none", color: "#e07070", cursor: "pointer", fontSize: 14, lineHeight: 1 }}>×</button>
           </div>
@@ -492,7 +485,6 @@ export default function MacroLens() {
               </svg>
             </button>
           </div>
-          {/* Input hint */}
           <p style={{ textAlign: "center", marginTop: 6, fontSize: 10, fontFamily: "'DM Mono', monospace", color: "#1e2535", letterSpacing: 0.3 }}>
             Enter to send · Shift+Enter for new line · Ctrl+K to focus
           </p>
