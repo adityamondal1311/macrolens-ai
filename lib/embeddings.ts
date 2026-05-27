@@ -56,3 +56,35 @@ export async function retrieveRelevantChunks(
 
   return context;
 }
+
+export async function retrieveRelevantChunksWithSources(
+  query: string,
+  matchCount: number = 7
+): Promise<{ context: string; sources: string[] }> {
+  const embedding = await getQueryEmbedding(query);
+
+  const { data, error } = await supabase.rpc("match_knowledge", {
+    query_embedding: embedding,
+    match_count: matchCount,
+  });
+
+  if (error) {
+    console.error("Supabase retrieval error:", error);
+    return { context: "", sources: [] };
+  }
+
+  if (!data || data.length === 0) {
+    return { context: "", sources: [] };
+  }
+
+  const context = data
+    .map(
+      (chunk: { source_file: string; content: string; similarity: number }) =>
+        `[Source: ${chunk.source_file}]\n${chunk.content}`
+    )
+    .join("\n\n---\n\n");
+
+  const sources = [...new Set(data.map((chunk: { source_file: string }) => chunk.source_file))] as string[];
+
+  return { context, sources };
+}

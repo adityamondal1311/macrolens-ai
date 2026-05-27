@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { retrieveRelevantChunks } from "@/lib/embeddings";
+import { retrieveRelevantChunksWithSources } from "@/lib/embeddings";
 
 export const runtime = "nodejs";
 
@@ -39,11 +39,13 @@ export async function POST(req: NextRequest) {
 
   // Retrieve relevant knowledge chunks from Supabase
   let context = "";
+  let sources: string[] = [];
   try {
-    context = await retrieveRelevantChunks(latestUserMessage, 7);
+    ({ context, sources } = await retrieveRelevantChunksWithSources(latestUserMessage, 7));
 
     console.log("--------- RAG QUERY ---------");
     console.log("User question:", latestUserMessage);
+    console.log("Sources:", sources);
     console.log("Retrieved context:", context.slice(0, 500));
     console.log("-----------------------------");
   } catch (err) {
@@ -78,7 +80,25 @@ Ground your answer in the above context. You may cite the source file name when 
     }),
   });
 
-  return new Response(response.body, {
+  // Prepend a single sources metadata event before forwarding Claude's stream
+  const sourcesEvent = `data: ${JSON.stringify({ type: "sources", sources })}\n\n`;
+  const sourcesBytes = new TextEncoder().encode(sourcesEvent);
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+
+  (async () => {
+    await writer.write(sourcesBytes);
+    const reader = response.body!.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      await writer.write(value);
+    }
+    await writer.close();
+  })();
+
+  return new Response(readable, {
     status: response.status,
     headers: {
       "Content-Type": "text/event-stream",

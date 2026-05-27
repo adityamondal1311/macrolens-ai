@@ -380,7 +380,13 @@ export default function MacroLens() {
           if (data === "[DONE]") continue;
           try {
             const parsed = JSON.parse(data);
-            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+            if (parsed.type === "sources") {
+              setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { ...updated[updated.length - 1], sources: parsed.sources };
+                return updated;
+              });
+            } else if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
               setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = {
