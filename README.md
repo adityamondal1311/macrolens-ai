@@ -4,6 +4,8 @@
 
 🔗 **Live Demo:** [macrolens-ai-khaki.vercel.app](https://macrolens-ai-khaki.vercel.app)
 
+![MacroLens AI](docs/screenshot.png)
+
 ---
 
 ## Why This Topic
