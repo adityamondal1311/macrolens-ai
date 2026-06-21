@@ -50,7 +50,7 @@ Transformers.js — Local Embedding Model
 Supabase pgvector — Similarity Search
 (Top 7 most relevant knowledge chunks retrieved)
      ↓
-Claude API — claude-sonnet-4-20250514
+Claude API — claude-sonnet-4-6
 (System prompt injected with retrieved context)
      ↓
 Streaming Response → UI (RAF-batched for smooth rendering)
@@ -66,7 +66,7 @@ This is a full **RAG (Retrieval Augmented Generation)** pipeline. Every response
 |---|---|
 | Frontend | Next.js 15, React, TypeScript |
 | UI | Custom dark theme, DM Sans + DM Mono, react-markdown |
-| AI Model | Anthropic Claude (claude-sonnet-4-20250514) |
+| AI Model | Anthropic Claude (claude-sonnet-4-6) |
 | Embeddings | Transformers.js — `Xenova/all-MiniLM-L6-v2` (local, free) |
 | Vector Database | Supabase with pgvector extension |
 | Streaming | Anthropic streaming API, RAF-batched ReadableStream |
